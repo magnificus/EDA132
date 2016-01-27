@@ -77,8 +77,6 @@ public class Main extends Application {
 							Move myMove = new Move(newI, newJ);
 							if (okMoves.contains(myMove)) {
 								updateBoard(myMove, tileState.WHITE);
-								// System.out.println(calculateBoardValue(boardState,
-								// tileState.WHITE));
 								playerTurn = false;
 								performBotTurn();
 
@@ -219,12 +217,14 @@ public class Main extends Application {
 			break;
 		}
 		b.setStyle("-fx-base: #" + toPlace + ";");
+//		b.re
 	}
 
 	protected void performBotTurn() {
-//		JOptionPane.showMessageDialog(null, "BOT MOVES!");
+		
 		List<Move> moves = getAllowedMoves(tileState.BLACK, boardState);
 		if (moves.size() == 0) {
+			JOptionPane.showMessageDialog(null, "Bot cannot move! You move again.");
 			playerTurn = true;
 			return;
 		}
@@ -233,6 +233,7 @@ public class Main extends Application {
 		System.out.println("Bot determined max number of bricks for white in " + searchDepth + " turns is: " + bestMove.value);
 		updateBoard(bestMove.m, tileState.BLACK);
 		if (getAllowedMoves(tileState.WHITE, boardState).size() == 0) {
+			JOptionPane.showMessageDialog(null, "You cannot move! Bot moves again.");
 			performBotTurn();
 		}
 		playerTurn = true;
