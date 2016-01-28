@@ -22,6 +22,9 @@ import javafx.stage.Stage;
 
 public class Main extends Application {
 
+	public static boolean hCouldMove = true;
+	public static boolean bCouldMove = true;
+
 	public enum tileState {
 		EMPTY, BLACK, WHITE
 	}
@@ -46,7 +49,7 @@ public class Main extends Application {
 	public static boolean playerTurn = true;
 	public static Move placedLatest;
 
-	public static final int searchDepth = 10;
+	public static final int searchDepth = 12;
 	public static final int size = 8;
 	public static tileState[][] boardState;
 	public static Button[][] buttons;
@@ -226,9 +229,18 @@ public class Main extends Application {
 
 		List<Move> moves = getAllowedMoves(tileState.BLACK, boardState);
 		if (moves.size() == 0) {
+			bCouldMove = false;
+			if (!hCouldMove) {
+				JOptionPane.showMessageDialog(null,
+						"Game over! Final scores: White: " + calculateBoardValue(boardState, tileState.WHITE)
+								+ " Black: " + calculateBoardValue(boardState, tileState.BLACK));
+				System.exit(0);
+			}
 			JOptionPane.showMessageDialog(null, "Bot cannot move! You move again.");
 			playerTurn = true;
 			return;
+		} else {
+			bCouldMove = true;
 		}
 		MoveValue bestMove = ABPruning(boardState, searchDepth, Integer.MIN_VALUE, Integer.MAX_VALUE, true);
 
@@ -236,8 +248,17 @@ public class Main extends Application {
 				"Bot determined max number of bricks for white in " + searchDepth + " turns is: " + bestMove.value);
 		updateBoard(bestMove.m, tileState.BLACK);
 		if (getAllowedMoves(tileState.WHITE, boardState).size() == 0) {
+			hCouldMove = false;
+			if (!bCouldMove){
+				JOptionPane.showMessageDialog(null,
+						"Game over! Final scores: White: " + calculateBoardValue(boardState, tileState.WHITE)
+								+ " Black: " + calculateBoardValue(boardState, tileState.BLACK));
+				System.exit(0);
+			}
 			JOptionPane.showMessageDialog(null, "You cannot move! Bot moves again.");
 			performBotTurn();
+		} else {
+			hCouldMove = true;
 		}
 		playerTurn = true;
 	}
