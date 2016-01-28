@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.JOptionPane;
 
@@ -43,8 +44,9 @@ public class Main extends Application {
 	}
 
 	public static boolean playerTurn = true;
+	public static Move placedLatest;
 
-	public static final int searchDepth = 3;
+	public static final int searchDepth = 10;
 	public static final int size = 8;
 	public static tileState[][] boardState;
 	public static Button[][] buttons;
@@ -173,8 +175,8 @@ public class Main extends Application {
 		return false;
 	}
 
-	public void testPartOfLine(AtomicBoolean foundMine, AtomicBoolean foundOther, AtomicBoolean moveOK, int x, int y, tileState mine, tileState other,
-			tileState[][] currentState) {
+	public void testPartOfLine(AtomicBoolean foundMine, AtomicBoolean foundOther, AtomicBoolean moveOK, int x, int y,
+			tileState mine, tileState other, tileState[][] currentState) {
 		if (!foundMine.get()) {
 			if (currentState[x][y] == mine) {
 				foundMine.set(true);
@@ -217,20 +219,21 @@ public class Main extends Application {
 			break;
 		}
 		b.setStyle("-fx-base: #" + toPlace + ";");
-//		b.re
+		// b.re
 	}
 
 	protected void performBotTurn() {
-		
+
 		List<Move> moves = getAllowedMoves(tileState.BLACK, boardState);
 		if (moves.size() == 0) {
 			JOptionPane.showMessageDialog(null, "Bot cannot move! You move again.");
 			playerTurn = true;
 			return;
 		}
-		MoveValue bestMove = getBestMove(boardState, searchDepth);
+		MoveValue bestMove = ABPruning(boardState, searchDepth, Integer.MIN_VALUE, Integer.MAX_VALUE, true);
 
-		System.out.println("Bot determined max number of bricks for white in " + searchDepth + " turns is: " + bestMove.value);
+		System.out.println(
+				"Bot determined max number of bricks for white in " + searchDepth + " turns is: " + bestMove.value);
 		updateBoard(bestMove.m, tileState.BLACK);
 		if (getAllowedMoves(tileState.WHITE, boardState).size() == 0) {
 			JOptionPane.showMessageDialog(null, "You cannot move! Bot moves again.");
@@ -249,53 +252,50 @@ public class Main extends Application {
 		public int value;
 	}
 
-	private MoveValue getBestMove(tileState[][] currentState, int sd) {
+	private MoveValue ABPruning(tileState[][] currentState, int sd, int alpha, int beta, boolean maximizing) {
+
+		// return value of board for WHITE at bottom node
 		if (sd == 0) {
-			return new MoveValue(null, calculateBoardValue(currentState, tileState.WHITE));
+			return new MoveValue(null, calculateBoardValue(currentState, tileState.BLACK));
 		}
 
-		List<Move> moves = getAllowedMoves(tileState.BLACK, currentState);
-
-		if (moves.size() == 0) {
-			List<Move> eM = getAllowedMoves(tileState.WHITE, currentState);
-			if (eM.size() == 0) {
-				return new MoveValue(null, calculateBoardValue(currentState, tileState.WHITE));
-			} else {
-				MoveValue localWorst = new MoveValue(null, Integer.MIN_VALUE);
-				for (Move mE : eM) {
-					MoveValue mV = getBestMove(calculateNewBoard(currentState, mE, tileState.WHITE), sd - 1);
-					if (mV.value > localWorst.value) {
-						localWorst = mV;
-					}
-
-				}
-				return localWorst;
+		MoveValue optimal;
+		if (maximizing) {
+			List<Move> moves = getAllowedMoves(tileState.BLACK, currentState);
+			if (moves.size() == 0) {
+				return ABPruning(currentState, sd - 1, alpha, beta, false);
 			}
-		} else {
-			MoveValue best = new MoveValue(null, Integer.MAX_VALUE);
+			optimal = new MoveValue(null, Integer.MIN_VALUE);
 			for (Move m : moves) {
-				tileState[][] newBoard = calculateNewBoard(currentState, m, tileState.BLACK);
-				List<Move> enemyMoves = getAllowedMoves(tileState.WHITE, newBoard);
-				MoveValue localWorst = new MoveValue(null, Integer.MIN_VALUE);
-				if (enemyMoves.size() == 0) {
-					localWorst = getBestMove(newBoard, sd - 1);
-				} else {
-					for (Move mE : enemyMoves) {
-						MoveValue mV = getBestMove(calculateNewBoard(newBoard, mE, tileState.WHITE), sd - 1);
-						if (mV.value > localWorst.value) {
-							localWorst = mV;
-						}
-
+				MoveValue v = ABPruning(calculateNewBoard(currentState, m, tileState.BLACK), sd - 1, alpha, beta,
+						false);
+				if (v.value > optimal.value) {
+					optimal = new MoveValue(m, v.value);
+					alpha = Math.max(alpha, optimal.value);
+					if (beta <= alpha) {
+						break;
 					}
 				}
 
-				if (localWorst.value < best.value) {
-					best = new MoveValue(m, localWorst.value);
-				}
-
 			}
-
-			return best;
+			return optimal;
+		} else {
+			optimal = new MoveValue(null, Integer.MAX_VALUE);
+			List<Move> eMoves = getAllowedMoves(tileState.WHITE, currentState);
+			if (eMoves.size() == 0) {
+				return ABPruning(currentState, sd - 1, alpha, beta, true);
+			}
+			for (Move m : eMoves) {
+				MoveValue v = ABPruning(calculateNewBoard(currentState, m, tileState.WHITE), sd - 1, alpha, beta, true);
+				if (v.value < optimal.value) {
+					optimal = new MoveValue(m, v.value);
+					beta = Math.min(beta, optimal.value);
+					if (beta <= alpha) {
+						break;
+					}
+				}
+			}
+			return optimal;
 		}
 
 	}
@@ -314,15 +314,6 @@ public class Main extends Application {
 		tileState[][] newBoard = copyBoard(old);
 
 		tileState mine = t;
-		tileState other = null;
-		switch (t) {
-		case WHITE:
-			other = tileState.BLACK;
-			break;
-		case BLACK:
-			other = tileState.WHITE;
-			break;
-		}
 
 		for (int x = m.x + 2; x < size; x++) {
 			if (newBoard[x][m.y] == mine) {
