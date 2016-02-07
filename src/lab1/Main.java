@@ -49,7 +49,7 @@ public class Main extends Application {
 	public static boolean playerTurn = true;
 	public static Move placedLatest;
 
-	public static final int searchDepth = 12;
+	public static final int searchDepth = 8;
 	public static final int size = 8;
 	public static tileState[][] boardState;
 	public static Button[][] buttons;
@@ -78,11 +78,17 @@ public class Main extends Application {
 					@Override
 					public void handle(ActionEvent arg0) {
 						if (playerTurn) {
-							List<Move> okMoves = getAllowedMoves(tileState.WHITE, boardState);
+							// List<Move> okMoves =
+							// getAllowedMoves(tileState.WHITE, boardState);
+//							for (Move m : getAllowedMoves(tileState.WHITE, boardState)){
+//								System.out.println("x: " + m.x + " y: " + m.y);
+//							}
+							
 							Move myMove = new Move(newI, newJ);
-							if (okMoves.contains(myMove)) {
+							if (moveOk(newI, newJ, tileState.WHITE, boardState)) {
 								updateBoard(myMove, tileState.WHITE);
 								playerTurn = false;
+								System.out.println("User move was OK");
 								performBotTurn();
 
 							}
@@ -134,52 +140,56 @@ public class Main extends Application {
 		case BLACK:
 			other = tileState.WHITE;
 			break;
+		default:
+			break;
 		}
 		if (currentState[x][y] != tileState.EMPTY) {
 			return false;
 		}
-		AtomicBoolean foundOther = new AtomicBoolean(false);
-		AtomicBoolean foundMine = new AtomicBoolean(false);
-		AtomicBoolean moveOK = new AtomicBoolean(false);
-		for (int i = 0; i < x; i++) {
-			testPartOfLine(foundMine, foundOther, moveOK, i, y, mine, other, currentState);
+
+		for (int i = 0; i < size; i++) {
+			for (int j = 0; j < size; j++) {
+				if (currentState[i][j] == mine) {
+					if (pathBetween(x, y, i, j, mine, other, currentState)) {
+						return true;
+					}
+				}
+			}
 		}
-		if (moveOK.get()) {
-			return true;
-		}
-		foundOther.set(false);
-		foundMine.set(false);
-		moveOK.set(false);
-		for (int i = size - 1; i > x; i--) {
-			testPartOfLine(foundMine, foundOther, moveOK, i, y, mine, other, currentState);
-		}
-		if (moveOK.get()) {
-			return true;
-		}
-		foundOther.set(false);
-		foundMine.set(false);
-		moveOK.set(false);
-		for (int j = 0; j < y; j++) {
-			testPartOfLine(foundMine, foundOther, moveOK, x, j, mine, other, currentState);
-		}
-		if (moveOK.get()) {
-			return true;
-		}
-		foundOther.set(false);
-		foundMine.set(false);
-		moveOK.set(false);
-		for (int j = size - 1; j > y; j--) {
-			testPartOfLine(foundMine, foundOther, moveOK, x, j, mine, other, currentState);
-		}
-		if (moveOK.get()) {
-			return true;
+		return false;
+	}
+
+	private boolean pathBetween(int x, int y, int x2, int y2, tileState mine, tileState other, tileState[][] state) {
+		int maxX = Math.max(x, x2);
+		int maxY = Math.max(y, y2);
+		int minX = Math.min(x, x2);
+		int minY = Math.min(y, y2);
+
+		if (y == y2) {
+			return testAxis(minX, y, maxX, y + 1, 1, 0, mine, other, state);
+		} else if (x == x2) {
+			return testAxis(x, minY, x+1, maxY, 0, 1, mine, other, state);
+		} else if (maxX - minX == maxY - minY) {
+			return testAxis(minX, minY, maxX, maxY, 1, 1, mine, other, state);
 		}
 
 		return false;
 	}
 
-	public void testPartOfLine(AtomicBoolean foundMine, AtomicBoolean foundOther, AtomicBoolean moveOK, int x, int y,
-			tileState mine, tileState other, tileState[][] currentState) {
+	private boolean testAxis(int startX, int startY, int maxX, int maxY, int changeX, int changeY, tileState mine, tileState other, tileState[][] state) {
+		boolean foundOther = false;
+		for (int i = startX + changeX, j = startY + changeY; i < maxX && j < maxY; i += changeX, j += changeY) {
+//			System.out.println("testing X: " + i + " Y: " + j);
+			if (state[i][j] != other) {
+				return false;
+			}
+			foundOther = true;
+		}
+		return foundOther;
+	}
+
+	public void testPartOfLine(AtomicBoolean foundMine, AtomicBoolean foundOther, AtomicBoolean moveOK, int x, int y, tileState mine, tileState other,
+			tileState[][] currentState) {
 		if (!foundMine.get()) {
 			if (currentState[x][y] == mine) {
 				foundMine.set(true);
@@ -231,9 +241,8 @@ public class Main extends Application {
 		if (moves.size() == 0) {
 			bCouldMove = false;
 			if (!hCouldMove) {
-				JOptionPane.showMessageDialog(null,
-						"Game over! Final scores: White: " + calculateBoardValue(boardState, tileState.WHITE)
-								+ " Black: " + calculateBoardValue(boardState, tileState.BLACK));
+				JOptionPane.showMessageDialog(null, "Game over! Final scores: White: " + calculateBoardValue(boardState, tileState.WHITE) + " Black: "
+						+ calculateBoardValue(boardState, tileState.BLACK));
 				System.exit(0);
 			}
 			JOptionPane.showMessageDialog(null, "Bot cannot move! You move again.");
@@ -244,15 +253,13 @@ public class Main extends Application {
 		}
 		MoveValue bestMove = ABPruning(boardState, searchDepth, Integer.MIN_VALUE, Integer.MAX_VALUE, true);
 
-		System.out.println(
-				"Bot determined max number of bricks for white in " + searchDepth + " turns is: " + bestMove.value);
+		System.out.println("Bot determined max number of bricks for white in " + searchDepth + " turns is: " + bestMove.value);
 		updateBoard(bestMove.m, tileState.BLACK);
 		if (getAllowedMoves(tileState.WHITE, boardState).size() == 0) {
 			hCouldMove = false;
-			if (!bCouldMove){
-				JOptionPane.showMessageDialog(null,
-						"Game over! Final scores: White: " + calculateBoardValue(boardState, tileState.WHITE)
-								+ " Black: " + calculateBoardValue(boardState, tileState.BLACK));
+			if (!bCouldMove) {
+				JOptionPane.showMessageDialog(null, "Game over! Final scores: White: " + calculateBoardValue(boardState, tileState.WHITE) + " Black: "
+						+ calculateBoardValue(boardState, tileState.BLACK));
 				System.exit(0);
 			}
 			JOptionPane.showMessageDialog(null, "You cannot move! Bot moves again.");
@@ -288,8 +295,7 @@ public class Main extends Application {
 			}
 			optimal = new MoveValue(null, Integer.MIN_VALUE);
 			for (Move m : moves) {
-				MoveValue v = ABPruning(calculateNewBoard(currentState, m, tileState.BLACK), sd - 1, alpha, beta,
-						false);
+				MoveValue v = ABPruning(calculateNewBoard(currentState, m, tileState.BLACK), sd - 1, alpha, beta, false);
 				if (v.value > optimal.value) {
 					optimal = new MoveValue(m, v.value);
 					alpha = Math.max(alpha, optimal.value);
@@ -328,6 +334,11 @@ public class Main extends Application {
 				updateButton(buttons[i][j], i, j);
 			}
 		}
+		if (placedLatest != null) {
+			buttons[placedLatest.x][placedLatest.y].setText("");
+		}
+		placedLatest = m;
+		buttons[m.x][m.y].setText("X");
 
 	}
 
@@ -368,6 +379,43 @@ public class Main extends Application {
 				break;
 			}
 		}
+
+		// diagonal
+
+		for (int x = m.x + 2, y = m.y + 2; x < size && y < size; x++, y++) {
+			if (newBoard[x][y] == mine) {
+				for (int nX = m.x, nY = m.y; nX < x; nX++, nY++) {
+					changeBoardState(newBoard, nX, nY, mine, false);
+				}
+				break;
+			}
+		}
+		for (int x = m.x + 2, y = m.y - 2; x < size && y >= 0; x++, y--) {
+			if (newBoard[x][y] == mine) {
+				for (int nX = m.x, nY = m.y; nX < x; nX++, nY--) {
+					changeBoardState(newBoard, nX, nY, mine, false);
+				}
+				break;
+			}
+		}
+
+		for (int x = m.x - 2, y = m.y + 2; x >= 0 && y < size; x--, y++) {
+			if (newBoard[x][y] == mine) {
+				for (int nX = m.x, nY = m.y; nX > x; nX--, nY++) {
+					changeBoardState(newBoard, nX, nY, mine, false);
+				}
+				break;
+			}
+		}
+		for (int x = m.x - 2, y = m.y - 2; x >= 0 && y >= 0; x--, y--) {
+			if (newBoard[x][y] == mine) {
+				for (int nX = m.x, nY = m.y; nX > x; nX--, nY--) {
+					changeBoardState(newBoard, nX, nY, mine, false);
+				}
+				break;
+			}
+		}
+
 		return newBoard;
 
 	}
