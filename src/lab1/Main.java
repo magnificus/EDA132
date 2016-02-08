@@ -49,7 +49,8 @@ public class Main extends Application {
 	public static boolean playerTurn = true;
 	public static Move placedLatest;
 
-	public static final int searchDepth = 8;
+	public static long timeLimit;
+	public static int searchDepth = 6;
 	
 	public static final int size = 8;
 	public static tileState[][] boardState;
@@ -61,6 +62,8 @@ public class Main extends Application {
 
 	@Override
 	public void start(Stage stage) throws Exception {
+		
+		timeLimit = Long.parseLong(JOptionPane.showInputDialog(null, "Enter time limit per turn (ms)"));
 
 		boardState = new tileState[size][size];
 		buttons = new Button[size][size];
@@ -210,6 +213,7 @@ public class Main extends Application {
 	}
 
 	protected void performBotTurn() {
+		long pre = System.currentTimeMillis();
 
 		List<Move> moves = getAllowedMoves(tileState.BLACK, boardState);
 		if (moves.size() == 0) {
@@ -225,7 +229,15 @@ public class Main extends Application {
 		} else {
 			bCouldMove = true;
 		}
-		MoveValue bestMove = ABPruning(boardState, searchDepth, Integer.MIN_VALUE, Integer.MAX_VALUE, true);
+		MoveValue bestMove = ABPruning(boardState, searchDepth, Integer.MIN_VALUE, Integer.MAX_VALUE, true, pre);
+		if (System.currentTimeMillis() - pre > timeLimit / 2){
+			System.out.println("Decreasing search depth");
+			searchDepth-=2;
+		} else if (System.currentTimeMillis() - pre < timeLimit / 1000){
+			System.out.println("Increasing search depth");
+			searchDepth+=2;
+		}
+		System.out.println("Search depth: " + searchDepth);
 
 		updateBoard(bestMove.m, tileState.BLACK);
 		if (getAllowedMoves(tileState.WHITE, boardState).size() == 0) {
@@ -253,22 +265,28 @@ public class Main extends Application {
 		public int value;
 	}
 
-	private MoveValue ABPruning(tileState[][] currentState, int sd, int alpha, int beta, boolean maximizing) {
+	private MoveValue ABPruning(tileState[][] currentState, int sd, int alpha, int beta, boolean maximizing, long pre) {
 
 		// return value of bottom node
+		
 		if (sd == 0) {
-			return new MoveValue(null, calculateBoardValue(currentState, tileState.BLACK));
+//			if (!maximizing){
+				return new MoveValue(null, calculateBoardValue(currentState, tileState.BLACK));
+//			} else{
+//				return new MoveValue(null, calculateBoardValue(currentState, tileState.WHITE));
+//			}
+			
 		}
 
 		MoveValue optimal;
 		if (maximizing) {
 			List<Move> moves = getAllowedMoves(tileState.BLACK, currentState);
 			if (moves.size() == 0) {
-				return ABPruning(currentState, sd - 1, alpha, beta, false);
+				return ABPruning(currentState, sd - 1, alpha, beta, false, pre);
 			}
 			optimal = new MoveValue(null, Integer.MIN_VALUE);
 			for (Move m : moves) {
-				MoveValue v = ABPruning(calculateNewBoard(currentState, m, tileState.BLACK), sd - 1, alpha, beta, false);
+				MoveValue v = ABPruning(calculateNewBoard(currentState, m, tileState.BLACK), sd - 1, alpha, beta, false, pre);
 				if (v.value > optimal.value) {
 					optimal = new MoveValue(m, v.value);
 					alpha = Math.max(alpha, optimal.value);
@@ -283,10 +301,10 @@ public class Main extends Application {
 			optimal = new MoveValue(null, Integer.MAX_VALUE);
 			List<Move> eMoves = getAllowedMoves(tileState.WHITE, currentState);
 			if (eMoves.size() == 0) {
-				return ABPruning(currentState, sd - 1, alpha, beta, true);
+				return ABPruning(currentState, sd - 1, alpha, beta, true, pre);
 			}
 			for (Move m : eMoves) {
-				MoveValue v = ABPruning(calculateNewBoard(currentState, m, tileState.WHITE), sd - 1, alpha, beta, true);
+				MoveValue v = ABPruning(calculateNewBoard(currentState, m, tileState.WHITE), sd - 1, alpha, beta, true, pre);
 				if (v.value < optimal.value) {
 					optimal = new MoveValue(m, v.value);
 					beta = Math.min(beta, optimal.value);
