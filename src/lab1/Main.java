@@ -50,6 +50,7 @@ public class Main extends Application {
 	public static Move placedLatest;
 
 	public static final int searchDepth = 8;
+	
 	public static final int size = 8;
 	public static tileState[][] boardState;
 	public static Button[][] buttons;
@@ -78,12 +79,6 @@ public class Main extends Application {
 					@Override
 					public void handle(ActionEvent arg0) {
 						if (playerTurn) {
-							// List<Move> okMoves =
-							// getAllowedMoves(tileState.WHITE, boardState);
-//							for (Move m : getAllowedMoves(tileState.WHITE, boardState)){
-//								System.out.println("x: " + m.x + " y: " + m.y);
-//							}
-							
 							Move myMove = new Move(newI, newJ);
 							if (moveOk(newI, newJ, tileState.WHITE, boardState)) {
 								updateBoard(myMove, tileState.WHITE);
@@ -91,6 +86,8 @@ public class Main extends Application {
 								System.out.println("User move was OK");
 								performBotTurn();
 
+							} else {
+								System.out.println("User move was NOT OK");
 							}
 
 						}
@@ -168,46 +165,23 @@ public class Main extends Application {
 		if (y == y2) {
 			return testAxis(minX, y, maxX, y + 1, 1, 0, mine, other, state);
 		} else if (x == x2) {
-			return testAxis(x, minY, x+1, maxY, 0, 1, mine, other, state);
+			return testAxis(x, minY, x + 1, maxY, 0, 1, mine, other, state);
 		} else if (maxX - minX == maxY - minY) {
-			return testAxis(minX, minY, maxX, maxY, 1, 1, mine, other, state);
+			return testAxis(minX, minY, maxX, maxY, 1, 1, mine, other, state) || testAxis(maxX, maxY, minX, minY, -1, -1, mine, other, state);
 		}
 
 		return false;
 	}
 
-	private boolean testAxis(int startX, int startY, int maxX, int maxY, int changeX, int changeY, tileState mine, tileState other, tileState[][] state) {
+	private boolean testAxis(int startX, int startY, int finishX, int finishY, int changeX, int changeY, tileState mine, tileState other, tileState[][] state) {
 		boolean foundOther = false;
-		for (int i = startX + changeX, j = startY + changeY; i < maxX && j < maxY; i += changeX, j += changeY) {
-//			System.out.println("testing X: " + i + " Y: " + j);
+		for (int i = startX + changeX, j = startY + changeY; i != finishX && j != finishY; i += changeX, j += changeY) {
 			if (state[i][j] != other) {
 				return false;
 			}
 			foundOther = true;
 		}
 		return foundOther;
-	}
-
-	public void testPartOfLine(AtomicBoolean foundMine, AtomicBoolean foundOther, AtomicBoolean moveOK, int x, int y, tileState mine, tileState other,
-			tileState[][] currentState) {
-		if (!foundMine.get()) {
-			if (currentState[x][y] == mine) {
-				foundMine.set(true);
-			}
-		} else if (!foundOther.get()) {
-			if (currentState[x][y] == tileState.EMPTY) {
-				foundMine.set(false);
-			} else if (currentState[x][y] == other) {
-				foundOther.set(true);
-				moveOK.set(true);
-			}
-		} else {
-			if (currentState[x][y] == mine || currentState[x][y] == tileState.EMPTY) {
-				moveOK.set(false);
-				foundOther.set(false);
-			}
-		}
-
 	}
 
 	protected void changeBoardState(tileState[][] t, int i, int j, tileState newState, boolean b) {
@@ -253,7 +227,6 @@ public class Main extends Application {
 		}
 		MoveValue bestMove = ABPruning(boardState, searchDepth, Integer.MIN_VALUE, Integer.MAX_VALUE, true);
 
-		System.out.println("Bot determined max number of bricks for white in " + searchDepth + " turns is: " + bestMove.value);
 		updateBoard(bestMove.m, tileState.BLACK);
 		if (getAllowedMoves(tileState.WHITE, boardState).size() == 0) {
 			hCouldMove = false;
@@ -282,7 +255,7 @@ public class Main extends Application {
 
 	private MoveValue ABPruning(tileState[][] currentState, int sd, int alpha, int beta, boolean maximizing) {
 
-		// return value of board for WHITE at bottom node
+		// return value of bottom node
 		if (sd == 0) {
 			return new MoveValue(null, calculateBoardValue(currentState, tileState.BLACK));
 		}
@@ -342,79 +315,35 @@ public class Main extends Application {
 
 	}
 
+	private void calculateAxis(tileState[][] board, int startX, int startY, int changeX, int changeY, int stopX, int stopY, tileState mine) {
+		for (int x = startX + changeX, y = startY + changeY; x != stopX && y != stopY; x += changeX, y += changeY) {
+			if (board[x][y] == mine) {
+				for (int nX = startX, nY = startY; nX != x || nY != y; nX += changeX, nY += changeY) {
+					changeBoardState(board, nX, nY, mine, false);
+				}
+				return;
+			}
+		}
+	}
+
 	public tileState[][] calculateNewBoard(tileState[][] old, Move m, tileState t) {
 		tileState[][] newBoard = copyBoard(old);
 
 		tileState mine = t;
 
-		for (int x = m.x + 2; x < size; x++) {
-			if (newBoard[x][m.y] == mine) {
-				for (int nX = m.x; nX < x; nX++) {
-					changeBoardState(newBoard, nX, m.y, mine, false);
-				}
-				break;
-			}
-		}
-		for (int x = m.x - 2; x >= 0; x--) {
-			if (newBoard[x][m.y] == mine) {
-				for (int nX = m.x; nX > x; nX--) {
-					changeBoardState(newBoard, nX, m.y, mine, false);
-				}
-				break;
-			}
-		}
-		for (int y = m.y + 2; y < size; y++) {
-			if (newBoard[m.x][y] == mine) {
-				for (int nY = m.y; nY < y; nY++) {
-					changeBoardState(newBoard, m.x, nY, mine, false);
-				}
-				break;
-			}
-		}
-		for (int y = m.y - 2; y >= 0; y--) {
-			if (newBoard[m.x][y] == mine) {
-				for (int nY = m.y; nY > y; nY--) {
-					changeBoardState(newBoard, m.x, nY, mine, false);
-				}
-				break;
-			}
-		}
+		// x & y - axis
+		
+		calculateAxis(newBoard, m.x, m.y, 1, 0, size, Integer.MAX_VALUE, mine);
+		calculateAxis(newBoard, m.x, m.y, -1, 0, -1, Integer.MAX_VALUE, mine);
+		calculateAxis(newBoard, m.x, m.y, 0, 1, Integer.MAX_VALUE, size, mine);
+		calculateAxis(newBoard, m.x, m.y, 0, -1, Integer.MAX_VALUE, -1, mine);
 
 		// diagonal
 
-		for (int x = m.x + 2, y = m.y + 2; x < size && y < size; x++, y++) {
-			if (newBoard[x][y] == mine) {
-				for (int nX = m.x, nY = m.y; nX < x; nX++, nY++) {
-					changeBoardState(newBoard, nX, nY, mine, false);
-				}
-				break;
-			}
-		}
-		for (int x = m.x + 2, y = m.y - 2; x < size && y >= 0; x++, y--) {
-			if (newBoard[x][y] == mine) {
-				for (int nX = m.x, nY = m.y; nX < x; nX++, nY--) {
-					changeBoardState(newBoard, nX, nY, mine, false);
-				}
-				break;
-			}
-		}
-
-		for (int x = m.x - 2, y = m.y + 2; x >= 0 && y < size; x--, y++) {
-			if (newBoard[x][y] == mine) {
-				for (int nX = m.x, nY = m.y; nX > x; nX--, nY++) {
-					changeBoardState(newBoard, nX, nY, mine, false);
-				}
-				break;
-			}
-		}
-		for (int x = m.x - 2, y = m.y - 2; x >= 0 && y >= 0; x--, y--) {
-			if (newBoard[x][y] == mine) {
-				for (int nX = m.x, nY = m.y; nX > x; nX--, nY--) {
-					changeBoardState(newBoard, nX, nY, mine, false);
-				}
-				break;
-			}
-		}
+		calculateAxis(newBoard, m.x, m.y, 1, 1, size, size, mine);
+		calculateAxis(newBoard, m.x, m.y, 1, -1, size, -1, mine);
+		calculateAxis(newBoard, m.x, m.y, -1, 1, -1, size, mine);
+		calculateAxis(newBoard, m.x, m.y, -1, -1, -1, -1, mine);
 
 		return newBoard;
 
