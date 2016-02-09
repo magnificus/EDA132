@@ -50,7 +50,7 @@ public class Main extends Application {
 	public static Move placedLatest;
 
 	public static long timeLimit;
-	public static int searchDepth = 6;
+	public static int searchDepth = 7;
 	
 	public static final int size = 8;
 	public static tileState[][] boardState;
@@ -63,7 +63,7 @@ public class Main extends Application {
 	@Override
 	public void start(Stage stage) throws Exception {
 		
-		timeLimit = Long.parseLong(JOptionPane.showInputDialog(null, "Enter time limit per turn (ms)"));
+		timeLimit = Long.parseLong(JOptionPane.showInputDialog("Enter time limit per turn (ms)", "1000"));
 
 		boardState = new tileState[size][size];
 		buttons = new Button[size][size];
@@ -232,10 +232,10 @@ public class Main extends Application {
 		MoveValue bestMove = ABPruning(boardState, searchDepth, Integer.MIN_VALUE, Integer.MAX_VALUE, true, pre);
 		if (System.currentTimeMillis() - pre > timeLimit / 2){
 			System.out.println("Decreasing search depth");
-			searchDepth-=2;
+			searchDepth = Math.max(searchDepth-1, 1);
 		} else if (System.currentTimeMillis() - pre < timeLimit / 1000){
 			System.out.println("Increasing search depth");
-			searchDepth+=2;
+			searchDepth++;
 		}
 		System.out.println("Search depth: " + searchDepth);
 
@@ -270,12 +270,7 @@ public class Main extends Application {
 		// return value of bottom node
 		
 		if (sd == 0) {
-//			if (!maximizing){
 				return new MoveValue(null, calculateBoardValue(currentState, tileState.BLACK));
-//			} else{
-//				return new MoveValue(null, calculateBoardValue(currentState, tileState.WHITE));
-//			}
-			
 		}
 
 		MoveValue optimal;
