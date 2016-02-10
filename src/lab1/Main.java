@@ -170,7 +170,7 @@ public class Main extends Application {
 		} else if (x == x2) {
 			return testAxis(x, minY, x + 1, maxY, 0, 1, mine, other, state);
 		} else if (maxX - minX == maxY - minY) {
-			return testAxis(minX, minY, maxX, maxY, 1, 1, mine, other, state) || testAxis(maxX, maxY, minX, minY, -1, -1, mine, other, state);
+			return testAxis(minX, minY, maxX, maxY, 1, 1, mine, other, state) || testAxis(minX, maxY, maxY, minY, 1, -1, mine, other, state);
 		}
 
 		return false;
