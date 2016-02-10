@@ -209,7 +209,6 @@ public class Main extends Application {
 			break;
 		}
 		b.setStyle("-fx-base: #" + toPlace + ";");
-		// b.re
 	}
 
 	protected void performBotTurn() {
@@ -270,7 +269,7 @@ public class Main extends Application {
 		// return value of bottom node
 		
 		if (sd == 0) {
-				return new MoveValue(null, calculateBoardValue(currentState, tileState.BLACK));
+			return new MoveValue(null, calculateBoardValue(currentState, tileState.BLACK	));
 		}
 
 		MoveValue optimal;
