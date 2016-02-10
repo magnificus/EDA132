@@ -330,6 +330,9 @@ public class Main extends Application {
 
 	private void calculateAxis(tileState[][] board, int startX, int startY, int changeX, int changeY, int stopX, int stopY, tileState mine) {
 		for (int x = startX + changeX, y = startY + changeY; x != stopX && y != stopY; x += changeX, y += changeY) {
+			if (board[x][y] == tileState.EMPTY){
+				return;
+			}
 			if (board[x][y] == mine) {
 				for (int nX = startX, nY = startY; nX != x || nY != y; nX += changeX, nY += changeY) {
 					changeBoardState(board, nX, nY, mine, false);
