@@ -60,26 +60,49 @@ public class SmartyLocalizer implements EstimatorInterface {
 	@Override
 	public void update() {
 		decideHeading();
-		updateLikelyLocation();
+		System.out.println("Moving: " + currentDirection);
 		move();
-		previous.add(getNewPoint());
+		updateLikelyLocation();
+		//previous.add(getNewPoint());
 
 	}
 
 	private void updateLikelyLocation() {
-		currentGuessedLocation = currentTrueLocation;
 		
+		// placeholder
+		currentGuessedLocation.x = currentTrueLocation.x+1;
+		currentGuessedLocation.y = currentTrueLocation.y;
 	}
 
 	private void move() {
-		// TODO Auto-generated method stub
+		switch (currentDirection){
+		case NORTH: currentTrueLocation.y = Math.max(currentTrueLocation.y - 1, 0); break;
+		case SOUTH: currentTrueLocation.y = Math.min(currentTrueLocation.y + 1, rows-1); break;
+		case EAST: currentTrueLocation.x = Math.min(currentTrueLocation.x + 1, cols-1); break;
+		case WEST: currentTrueLocation.x = Math.max(currentTrueLocation.x - 1, 0); break;
+		}
 		
 	}
 
 	private void decideHeading() {
 		
-		// wall west
+		List<Direction> candidates = new ArrayList<Direction>();
+		if (currentGuessedLocation.x > 0){
+			candidates.add(Direction.WEST);
+		}
+		if (currentGuessedLocation.x < cols-1){
+			candidates.add(Direction.EAST);
+		}
+		if (currentGuessedLocation.y > 0){
+			candidates.add(Direction.NORTH);
+		}
+		if (currentGuessedLocation.y < rows-1){
+			candidates.add(Direction.SOUTH);
+		}
 		
+		// return random possible direction
+		
+		currentDirection = candidates.get(new Random().nextInt(candidates.size()));
 		
 	}
 
@@ -129,12 +152,12 @@ public class SmartyLocalizer implements EstimatorInterface {
 
 	@Override
 	public int[] getCurrentTruePosition() {
-		return new int[] { currentTrueLocation.x, currentTrueLocation.y };
+		return new int[] { currentTrueLocation.y, currentTrueLocation.x };
 	}
 
 	@Override
 	public int[] getCurrentReading() {
-		return new int[] {currentGuessedLocation.x, currentGuessedLocation.y};
+		return new int[] {currentGuessedLocation.y, currentGuessedLocation.x};
 	}
 
 	@Override
