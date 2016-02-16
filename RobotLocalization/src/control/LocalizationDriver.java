@@ -9,7 +9,8 @@ public class LocalizationDriver extends Thread {
 	
 	public LocalizationDriver( long stepTime, RobotLocalizationViewer v) {
 		this.l = v;
-		this.timer = stepTime;
+//		this.timer = stepTime;
+		this.timer = 0;
 	}
 	
 	public void run() {

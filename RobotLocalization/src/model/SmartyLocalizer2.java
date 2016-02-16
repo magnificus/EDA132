@@ -7,7 +7,7 @@ import java.util.Random;
 
 import control.EstimatorInterface;
 
-public class SmartyLocalizer implements EstimatorInterface {
+public class SmartyLocalizer2 implements EstimatorInterface {
 	
 	public enum Direction{
 		NORTH, SOUTH, EAST, WEST;
@@ -17,19 +17,17 @@ public class SmartyLocalizer implements EstimatorInterface {
 	private static final float secondNeighborChance = 0.025f;
 	private static final float trueChance = 0.1f;
 	
-	private double[][][][][][][][] matrix;
+	private double[][] matrix;
 	private Point currentTrueLocation;
-	private Point prevSensorLoc;
 	private Point sensorLoc;
 	private Point currentGuessed;
 	private int rows, cols, head;
-	private Direction latestDirection;
 	private Direction currentDirection;
 	
 	private ArrayList<Double> latestDistances;
 	
 
-	public SmartyLocalizer(int rows, int cols, int head) {
+	public SmartyLocalizer2(int rows, int cols, int head) {
 		this.cols = cols;
 		this.rows = rows;
 		this.head = head;
@@ -38,34 +36,21 @@ public class SmartyLocalizer implements EstimatorInterface {
 		
 		latestDistances = new ArrayList<Double>();
 		
-		matrix = new double[rows][cols][4][rows][cols][4][rows][cols];
+		matrix = new double[rows][cols];
 		double std = 1 / (rows * cols);
 		for (int i = 0 ; i < matrix.length; i++){
-			for (int j = 0; j < matrix[0].length; j++){
-				for (int k = 0; k < matrix[0][0].length; k++){
-					for (int l = 0; l < matrix[0][0][0].length; l++){
-						for (int m = 0; m < matrix[0][0][0][0].length; m++){
-							for (int n = 0; n < matrix[0][0][0][0][0].length; n++){
-								for (int o = 0; o < matrix[0][0][0][0][0][0].length; o++){
-									for (int p = 0; p < matrix[0][0][0][0][0][0][0].length; p++){
-										matrix[i][j][k][l][m][n][o][p] = std;
-
-									}
-								}
-							}
-							
-						}
-					}
+			for (int j = 0; j < matrix.length; j++){
+				if (i == j){
+					matrix[i][j] = 1;
+				} else{
+					matrix[i][j] = 0;
 				}
-				
 			}
+	
 		}
 		Random rand = new Random();
 		currentTrueLocation = new Point(rand.nextInt(rows), rand.nextInt(cols));
-		prevSensorLoc = new Point(rows/2, cols/2);
 		sensorLoc = new Point(rows/2, cols/2);
-		currentGuessed = new Point(rows/2, cols/2);
-		latestDirection = getRandomDirection();
 		currentDirection = getRandomDirection();
 	}
 
@@ -93,10 +78,9 @@ public class SmartyLocalizer implements EstimatorInterface {
 			p = getNewPoint();
 		}
 		
-		matrix[prevSensorLoc.x][prevSensorLoc.y][getEnumInt(latestDirection)][sensorLoc.x][sensorLoc.y][getEnumInt(currentDirection)][p.x][p.y]++;
-		prevSensorLoc = sensorLoc;
 		sensorLoc = p;
 		
+		updateLikelyLocation();
 		latestDistances.add(currentGuessed.distance(currentTrueLocation));
 		if (latestDistances.size() > 100){
 			latestDistances.remove(0);
@@ -110,27 +94,50 @@ public class SmartyLocalizer implements EstimatorInterface {
 		decideHeading();
 		//System.out.println("Moving: " + currentDirection);
 		move();
-		updateLikelyLocation();
+		System.out.println();
 		//previous.add(getNewPoint());
 
 	}
 
 	private void updateLikelyLocation() {
 		double highestFound = -1;
+		double[][] sensorMatrix = createSensorMatrix();
 		Point highestPoint = null; 
 		for (int i = 0; i < cols; i++){
-			for (int j = 0; j < cols; j++){
-				double current = matrix[prevSensorLoc.x][prevSensorLoc.y][getEnumInt(latestDirection)][sensorLoc.x][sensorLoc.y][getEnumInt(currentDirection)][i][j];
-				if (current > highestFound && inScope(i,j)){
-					highestFound = current;
-					highestPoint = new Point(i,j);
-				}
+			for (int j = 0; j < rows; j++){
+//				double current = matrix[prevSensorLoc.x][prevSensorLoc.y][getEnumInt(latestDirection)][sensorLoc.x][sensorLoc.y][getEnumInt(currentDirection)][i][j];
+//				if (current > highestFound && inScope(i,j)){
+//					highestFound = current;
+//					highestPoint = new Point(i,j);
+//				}
 			}
 		}
 		
 		currentGuessed = highestPoint;
 		System.out.println("Highest probability in tile: " + highestPoint);
 		
+	}
+
+	private double[][] createSensorMatrix() {
+		Point target = sensorLoc;
+		double[][] outMatrix = new double[rows][cols];
+		for (int i = 0; i < rows; i++){
+			for (int j = 0; j < cols; j++){
+				int dist = Math.max(Math.abs(i-target.x), Math.abs(j - target.y));
+				if (dist == 0){
+					outMatrix[i][j] = trueChance;
+				}
+				else if (dist == 1){
+					outMatrix[i][j] = firstNeighborChance;
+				}
+				else if (dist == 2){
+					outMatrix[i][j] = secondNeighborChance;
+				} else{
+					outMatrix[i][j] = 0;
+				}
+			}
+		}
+		return outMatrix;
 	}
 
 	private void move() {
@@ -161,7 +168,6 @@ public class SmartyLocalizer implements EstimatorInterface {
 		}
 		
 		// return random possible direction
-		latestDirection = currentDirection;
 		currentDirection = candidates.get(new Random().nextInt(candidates.size()));
 		
 	}
@@ -220,10 +226,10 @@ public class SmartyLocalizer implements EstimatorInterface {
 		return new int[] {sensorLoc.y, sensorLoc.x};
 	}
 
-	@Override
-	public double getCurrentProb(int x, int y) {
-		return matrix[prevSensorLoc.x][prevSensorLoc.y][getEnumInt(latestDirection)][sensorLoc.x][sensorLoc.y][getEnumInt(currentDirection)][y][x] / getTotalSumMatrix(matrix[prevSensorLoc.x][prevSensorLoc.y][getEnumInt(latestDirection)][sensorLoc.x][sensorLoc.y][getEnumInt(currentDirection)]);
-	}
+//	@Override
+//	public double getCurrentProb(int x, int y) {
+////		return matrix[prevSensorLoc.x][prevSensorLoc.y][getEnumInt(latestDirection)][sensorLoc.x][sensorLoc.y][getEnumInt(currentDirection)][y][x] / getTotalSumMatrix(matrix[prevSensorLoc.x][prevSensorLoc.y][getEnumInt(latestDirection)][sensorLoc.x][sensorLoc.y][getEnumInt(currentDirection)]);
+//	}
 
 	@Override
 	public double getOrXY(int rX, int rY, int x, int y) {
@@ -279,6 +285,12 @@ public class SmartyLocalizer implements EstimatorInterface {
 		}
 		return Integer.MIN_VALUE;
 		
+	}
+
+	@Override
+	public double getCurrentProb(int x, int y) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 }
