@@ -46,7 +46,7 @@ public interface EstimatorInterface {
 	 * (x,y) in the grid. The different headings are not considered, as it makes the 
 	 * view somewhat unclear.
 	 */
-	public double getCurrentProb( int x, int y);
+	public double getCurrentProb(int x, int y);
 
 	/*
 	 * returns the probability entry of the sensor matrices O to get reading r corresponding 
