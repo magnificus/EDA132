@@ -2,6 +2,7 @@ package control;
 
 import model.DummyLocalizer;
 import model.SmartyLocalizer;
+import model.SmartyLocalizer2;
 import view.RobotLocalizationViewer;
 
 public class Main {
@@ -16,7 +17,7 @@ public class Main {
 		 * generate you own localiser / estimator wrapper here to plug it into the 
 		 * graphics class.
 		 */
-		EstimatorInterface l = new SmartyLocalizer( 4, 4, 4);
+		EstimatorInterface l = new SmartyLocalizer2( 4, 4, 4);
 
 		RobotLocalizationViewer viewer = new RobotLocalizationViewer( l);
 
