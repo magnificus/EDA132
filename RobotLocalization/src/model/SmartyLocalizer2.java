@@ -59,7 +59,7 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 		}
 		for (PointDir p : nulls) {
 			for (int k = 0; k < 4; k++) {
-				sensorMatrices[16][p.p.x * 16 + p.p.y * 4 + k] = p.d / totalOutside;
+				sensorMatrices[16][p.p.x * 16 + p.p.y * 4 + k] = (double) p.d / totalOutside;
 			}
 		}
 
@@ -71,8 +71,6 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 		for (int i = 0; i < 64; i++) {
 			total[i] = 0;
 		}
-		Matrix a = new Matrix(matrix);
-		a.print(1, 3);
 		
 		stateMatrix = new double[rows*cols*head][1];
 		for(int i = 0; i < 64; i++){
@@ -156,6 +154,7 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 				candidates.add(new PointDir(new Point(i, j + 1), SOUTH));
 			}
 
+
 			for (PointDir pointdir : candidates) {
 				outMatrix[pointdir.p.x * 16 + pointdir.p.y * 4 + pointdir.d] = (double) 1 / (double) candidates.size();
 			}
@@ -171,7 +170,7 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 
 		
 		Point newP = stepInDir(i,j,k);
-		outMatrix[newP.x*16 +newP.y * 4 + k] = .7;
+		outMatrix[newP.x*16 +newP.y * 4 + k] = 0.7;
 		
 		List<PointDir> candidates = new ArrayList<PointDir>();
 		
@@ -204,7 +203,6 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 	}
 
 	private boolean getColliding(int i, int j, int k) {
-		// return j == 0 || j == rows - 1 || i == 0 || i == cols - 1;
 		switch (k) {
 		case NORTH:
 			return j == 0;
@@ -238,6 +236,8 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 	@Override
 	public void update() {
 
+		moveBot();
+
 		latestSens = getNewPoint();
 		
 		double[] currentSens;
@@ -249,18 +249,12 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 		
 		stateMatrix = calculatePosition(currentSens, matrix, stateMatrix);
 		double total = 0;
-		for (int i = 0; i < 64; i++){
+		for (int i = 0; i < rows*cols*head; i++){
 			total += stateMatrix[i][0];
 		}
-		for (int i = 0; i < 64; i++){
-			stateMatrix[i][0] *= 1/total;
+		for (int i = 0; i < rows*cols*head; i++){
+			stateMatrix[i][0] /= total;
 		}
-		
-		Matrix m = new Matrix(stateMatrix);
-		m.print(3, 3);
-		//System.out.println("Dist: " ());
-				
-		moveBot();
 		
 
 	}
@@ -281,13 +275,8 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 		Matrix sensMatrix = new Matrix(expandedSens);
 		Matrix transMatrix = new Matrix(matrix2);
 		Matrix stateMatrix = new Matrix(stateVector);
-		transMatrix = transMatrix.transpose();
-		sensMatrix = sensMatrix.times(transMatrix);
-		stateMatrix = sensMatrix.times(stateMatrix);
-		//stateMatrix.
-		//stateMatrix.print(3, 3);
-		return stateMatrix.getArray();
-		
+		return sensMatrix.times(transMatrix.transpose()).times(stateMatrix).getArray();
+
 		
 		
 
@@ -343,7 +332,7 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 		List<Point> points = new ArrayList<Point>();
 		for (int i = loc.x - dist; i <= loc.x + dist; i++) {
 			for (int j = loc.y - dist; j <= loc.y + dist; j++) {
-				if (Math.max(Math.abs(i), Math.abs(j)) == dist && inScope(i, j)) {
+				if (Math.max(Math.abs(i-loc.x), Math.abs(j - loc.y)) == dist && inScope(i, j)) {
 					points.add(new Point(i, j));
 				}
 			}
@@ -358,7 +347,7 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 
 	@Override
 	public int[] getCurrentTruePosition() {
-		return new int[] { currentTrueLocation.y, currentTrueLocation.x };
+		return new int[] { currentTrueLocation.x, currentTrueLocation.y };
 	}
 
 	@Override
@@ -368,8 +357,8 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 
 	@Override
 	public double getOrXY(int rX, int rY, int x, int y) {
-
-		return sensorMatrices[rX*16+rY*4+0][x*4+y];
+		
+		return sensorMatrices[rX*16+rY*4][x*4+y];
 	}
 
 	@Override
@@ -377,15 +366,6 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 		return matrix[x * 16 + y * 4 + h][nX * 16 + nY * 4 + nH];
 	}
 
-	double getTotalSumMatrix(double[][] in) {
-		double acc = 0;
-		for (int i = 0; i < in.length; i++) {
-			for (int j = 0; j < in[0].length; j++) {
-				acc += in[i][j];
-			}
-		}
-		return acc;
-	}
 
 	private int getRandomDirection() {
 		return new Random().nextInt(4);
@@ -393,7 +373,11 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 
 	@Override
 	public double getCurrentProb(int x, int y) {
-		return stateMatrix[x*4 + y][0];
+		double tot = 0;
+		for (int i = 0; i < 4; i++){
+			tot += stateMatrix[x*16 + y*4 + i][0];
+		}
+		return tot;
 	}
 
 }
