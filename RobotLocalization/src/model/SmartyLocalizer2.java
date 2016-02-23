@@ -29,12 +29,14 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 	private int currentDirection;
 	
 	private Point latestSens;
+	private ArrayList<Integer> latestDistances;
 
 	public SmartyLocalizer2(int rows, int cols, int head) {
 		this.cols = cols;
 		this.rows = rows;
 		this.head = head;
 
+		latestDistances = new ArrayList<Integer>();
 		matrix = new double[rows * cols * head][rows * cols * head];
 		for (int i = 0; i < rows; i++) {
 			for (int j = 0; j < cols; j++) {
@@ -237,6 +239,20 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 	public void update() {
 
 		moveBot();
+		
+		Point mostLikely = getMostLikely();
+		latestDistances.add(Math.abs(mostLikely.x - currentTrueLocation.x) + Math.abs(mostLikely.y - currentTrueLocation.y));
+		
+		if (latestDistances.size() > 100){
+			latestDistances.remove(0);
+		}
+		
+		double total = 0;
+		for (Integer i : latestDistances){
+			total += i;
+		}
+		
+		System.out.println("Current averaged distance is: " + total / latestDistances.size());
 
 		latestSens = getNewPoint();
 		
@@ -248,7 +264,7 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 		}
 		
 		stateMatrix = calculatePosition(currentSens, matrix, stateMatrix);
-		double total = 0;
+		total = 0;
 		for (int i = 0; i < rows*cols*head; i++){
 			total += stateMatrix[i][0];
 		}
@@ -257,6 +273,21 @@ public class SmartyLocalizer2 implements EstimatorInterface {
 		}
 		
 
+	}
+
+	private Point getMostLikely() {
+		Point mostLikely = null;
+		double maxChance = Double.MIN_VALUE;
+		for (int x = 0; x < rows; x++){
+			for (int y = 0; y < cols; y++){
+				double currentProb = getCurrentProb(x,y);
+				if (currentProb > maxChance){
+					mostLikely = new Point(x,y);
+					maxChance = currentProb;
+				}
+			}
+		}
+		return mostLikely;
 	}
 
 	private double[][] calculatePosition(double[] currentSens, double[][] matrix2, double[][] stateVector) {
