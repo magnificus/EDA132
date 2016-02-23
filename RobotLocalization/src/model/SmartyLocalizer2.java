@@ -12,10 +12,10 @@ import model.SmartyLocalizer.Direction;
 
 public class SmartyLocalizer2 implements EstimatorInterface {
 
-	public static final int NORTH = 0;
+	public static final int WEST = 0;
 	public static final int SOUTH = 1;
-	public static final int WEST = 2;
-	public static final int EAST = 3;
+	public static final int EAST = 2;
+	public static final int NORTH = 3;
 
 	private static final double firstNeighborChance = 0.05;
 	private static final double secondNeighborChance = 0.025;
