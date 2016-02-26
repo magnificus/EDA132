@@ -33,7 +33,7 @@ public class Main {
 		EntriesStats e = new EntriesStats(entries);
 		System.out.println("Decision tree contains: " + e.totY + " positives & " + e.totN + " negatives");
 		attributes.remove(attributes.size()-1);
-		Node root = new Node(e.totY, e.totN, new Attribute("Root", "Root"));
+		Node root = new Node(e.totY, e.totN, new Attribute("Root", ""));
 		buildTree(root, attributes, entries);
 		
 		root.print("");
@@ -43,37 +43,40 @@ public class Main {
 
 	private static void buildTree(Node previous, Collection<String> remainingAttributes, List<List<String>> remainingEntries) throws InvalidAttributesException {
 		
-		double maxEntropy = Double.MAX_VALUE;
-		String maxEntryAtt = null;
+		double minEnt = Double.MAX_VALUE;
+		String minEntAtt = null;
 		double currEntropy;
 		for (String a : remainingAttributes){
 			// calculate entropy for each..
 			currEntropy = calculateEntropy(a, remainingEntries);
-//			System.out.println("Entropy for: " + a + " = " + currEntropy);
-			if (currEntropy < maxEntropy){
-				maxEntropy = currEntropy;
-				maxEntryAtt = a;
+			System.out.println("Entropy for: " + a + " = " + currEntropy);
+			if (currEntropy < minEnt){
+				minEnt = currEntropy;
+				minEntAtt = a;
 			}
 		}
 		
 		
 		// split on attribute
 //		System.out.println();
-		for (String option : options.get(maxEntryAtt)){
+		for (String option : options.get(minEntAtt)){
 			List<String> stillRemainingAttributes = new ArrayList<String>(remainingAttributes);
-			stillRemainingAttributes.remove(maxEntryAtt);
+			stillRemainingAttributes.remove(minEntAtt);
 			List<List<String>> stillRemaining = new ArrayList<List<String>>();
 			for (List<String> l : remainingEntries){
-				if (l.get(attributeMap.get(maxEntryAtt)).equals(option)){
+				if (l.get(attributeMap.get(minEntAtt)).equals(option)){
 					stillRemaining.add(l);
 				}
 			}
 			EntriesStats e = new EntriesStats(stillRemaining);
 			if (e.totY == 0 || e.totN == 0 || stillRemainingAttributes.size() == 0 || stillRemaining.size() == 0){
-				Leaf newLeaf = new Leaf(e.totY, e.totN, new Attribute(maxEntryAtt, option));
+				if (e.tot == 0){
+					continue;
+				}
+				Leaf newLeaf = new Leaf(e.totY, e.totN, new Attribute(minEntAtt, option));
 				previous.addElement(newLeaf);
 			} else{
-				Node newNode = new Node(e.totY, e.totN, new Attribute(maxEntryAtt, option));
+				Node newNode = new Node(e.totY, e.totN, new Attribute(minEntAtt, option));
 				previous.addElement(newNode);
 				buildTree(newNode, stillRemainingAttributes, stillRemaining);
 			}
@@ -86,36 +89,54 @@ public class Main {
 
 		List<String> currOptions = options.get(a);
 		
-		double totEntr = 0;
-		for (String s : currOptions){
+		double[] tots = new double[currOptions.size()];
+		double[] ents = new double[currOptions.size()];
+		
+		for (int i = 0; i < currOptions.size(); i++){
+			String s = currOptions.get(i);
 			double totY = 0;
 			double totN = 0;
 			for (List<String> l : remainingEntries){
 				if (l.get(attributeMap.get(a)).equals(s)){
 					if (l.get(l.size()-1).toLowerCase().equals("true")){
+						// entry and true
 						totY++;
 					} else{
+						// entry and false
 						totN++;
 					}
 				} else{
 					if (l.get(l.size()-1).toLowerCase().equals("true")){
+						// not entry and true
 						totN++;
 					} else{
+						// not entry and false
 						totY++;
 					}
 				}
 			}
+			// weight
+			tots[i] = totY + totN;
 			if (totY == 0 || totN == 0){
-				continue;
+				// zero entropy
+				ents[i] = 0;
+			} else{
+				double tot = totY + totN;
+				double currEntr = - (totY/tot) * log2(totY/tot) - (totN/tot) * log2(totN/tot);
+				ents[i] = currEntr;
 			}
-			double tot = totY + totN;
-
-			double currEntr = - totY/tot * log2(totY/tot) - totN/tot * log2(totN/tot);
-			totEntr += currEntr;
+			
+		}
+		
+		double totalPop = 0;
+		double totalEnt = 0;
+		for (int i = 0; i < tots.length; i++){
+			totalPop += tots[i];
+			totalEnt += ents[i] * tots[i];
 		}
 			
 		
-		return totEntr;
+		return totalEnt / totalPop;
 	}
 	
 	public static double log2(double n)
@@ -173,6 +194,7 @@ public class Main {
 		
 		if (!readLine.startsWith("@DATA")){
 			System.out.println("no @data");
+			reader.close();
 			throw new InvalidAttributesException();
 
 		}	
