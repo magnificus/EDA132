@@ -58,6 +58,7 @@ public class Main {
 		
 		
 		// split on attribute
+//		System.out.println();
 		for (String option : options.get(maxEntryAtt)){
 			List<String> stillRemainingAttributes = new ArrayList<String>(remainingAttributes);
 			stillRemainingAttributes.remove(maxEntryAtt);
@@ -105,11 +106,11 @@ public class Main {
 				}
 			}
 			if (totY == 0 || totN == 0){
-				return 0;
+				continue;
 			}
 			double tot = totY + totN;
 
-			double currEntr = -totY/tot * log2(totY/tot) - totN/tot * log2(totN/tot);
+			double currEntr = - totY/tot * log2(totY/tot) - totN/tot * log2(totN/tot);
 			totEntr += currEntr;
 		}
 			
@@ -122,7 +123,7 @@ public class Main {
 	    return (Math.log(n) / Math.log(2));
 	}
 
-	private static void parse() throws IOException {
+	private static void parse() throws IOException, InvalidAttributesException {
 		attributes = new ArrayList<String>();
 		entries = new ArrayList<List<String>>();
 		options = new HashMap<String, List<String>>();
@@ -171,8 +172,9 @@ public class Main {
 		}
 		
 		if (!readLine.startsWith("@DATA")){
-			System.out.println("nodata");
-			System.exit(0);
+			System.out.println("no @data");
+			throw new InvalidAttributesException();
+
 		}	
 		
 		readLine = reader.readLine();
