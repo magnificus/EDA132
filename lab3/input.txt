@@ -22,6 +22,6 @@ False,True,False,True,Some,$$,True,True,Italian,0-10,True
 False,True,False,False,None,$,True,False,Burger,0-10,False
 False,False,False,True,Some,$$,True,True,Thai,0-10,True
 False,True,True,False,Full,$,True,False,Burger,>60,False
-True,True,TrueTrue,Full,$$$,False,True,Italian,10-30,False
+True,True,True, True,Full,$$$,False,True,Italian,10-30,False
 False,False,False,False,None,$,False,False,Thai,0-10,False
 True,True,True,True,Full,$,False,False,Burger,30-60,True
