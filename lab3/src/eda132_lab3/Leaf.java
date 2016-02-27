@@ -2,6 +2,9 @@ package eda132_lab3;
 
 import java.util.Map;
 
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+
 public class Leaf extends TreeElement{
 	public Leaf(Map<String, Integer> counts, Attribute option){
 		super(counts, option);
@@ -19,6 +22,12 @@ public class Leaf extends TreeElement{
 
 	@Override
 	public void search(String[] recieved, String pre) {
+		Alert alert = new Alert(AlertType.INFORMATION);
+		alert.setTitle("Result");
+		alert.setHeaderText("The result of the search was: ");
+		alert.setContentText(getCountsString(""));
+
+		alert.showAndWait();
 	}
 	
 	
