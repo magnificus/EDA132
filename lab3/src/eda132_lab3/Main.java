@@ -1,27 +1,32 @@
 package eda132_lab3;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.naming.directory.InvalidAttributesException;
 
 
 
-public class Main {
 
-	public static String relation;
+public class Main {
+	
+	public static String fileName = "lenses.arff";
+
+	public static String relation;	
+	// possible "splitters", known factors
 	public static List<String> attributes;
+	// possible answers, i.e. True and False of binary question
+	public static List<String> possibilities;	
+	// possible alternatives for each factor
 	public static Map<String, List<String>> options;
+	// map to get attribute position in each data entry
 	public static Map<String, Integer> attributeMap;
+	// the data entries
 	public static List<List<String>> entries;
 	
 
@@ -30,10 +35,10 @@ public class Main {
 		
 		parse();
 		
-		EntriesStats e = new EntriesStats(entries);
-		System.out.println("Decision tree contains: " + e.totY + " positives & " + e.totN + " negatives");
-		attributes.remove(attributes.size()-1);
-		Node root = new Node(e.totY, e.totN, new Attribute("Root", ""));
+		EntriesStats e = new EntriesStats(entries, possibilities);
+		System.out.println("Decision tree possibilities: " + e.counts.size()); 
+//		attributes.remove(attributes.size()-1);
+		Node root = new Node(e.counts, new Attribute("Root", ""));
 		buildTree(root, attributes, entries);
 		
 		root.print("");
@@ -41,15 +46,15 @@ public class Main {
 		
 	}
 
-	private static void buildTree(Node previous, Collection<String> remainingAttributes, List<List<String>> remainingEntries) throws InvalidAttributesException {
+	private static void buildTree(Node previous, List<String> remaining, List<List<String>> remainingEntries) throws InvalidAttributesException {
 		
 		double minEnt = Double.MAX_VALUE;
 		String minEntAtt = null;
 		double currEntropy;
-		for (String a : remainingAttributes){
+		for (String a : remaining){
 			// calculate entropy for each..
 			currEntropy = calculateEntropy(a, remainingEntries);
-			System.out.println("Entropy for: " + a + " = " + currEntropy);
+			System.out.println(currEntropy);
 			if (currEntropy < minEnt){
 				minEnt = currEntropy;
 				minEntAtt = a;
@@ -60,7 +65,7 @@ public class Main {
 		// split on attribute
 //		System.out.println();
 		for (String option : options.get(minEntAtt)){
-			List<String> stillRemainingAttributes = new ArrayList<String>(remainingAttributes);
+			List<String> stillRemainingAttributes = new ArrayList<String>(remaining);
 			stillRemainingAttributes.remove(minEntAtt);
 			List<List<String>> stillRemaining = new ArrayList<List<String>>();
 			for (List<String> l : remainingEntries){
@@ -68,15 +73,17 @@ public class Main {
 					stillRemaining.add(l);
 				}
 			}
-			EntriesStats e = new EntriesStats(stillRemaining);
-			if (e.totY == 0 || e.totN == 0 || stillRemainingAttributes.size() == 0 || stillRemaining.size() == 0){
-				if (e.tot == 0){
+			EntriesStats e = new EntriesStats(stillRemaining, possibilities);
+			int tot = e.totalNonEmpty;
+			if (tot < 2 || stillRemainingAttributes.size() == 0 || stillRemaining.size() == 0){
+				if (tot == 0){
+					// no leaf for empty set
 					continue;
 				}
-				Leaf newLeaf = new Leaf(e.totY, e.totN, new Attribute(minEntAtt, option));
+				Leaf newLeaf = new Leaf(e.counts, new Attribute(minEntAtt, option));
 				previous.addElement(newLeaf);
 			} else{
-				Node newNode = new Node(e.totY, e.totN, new Attribute(minEntAtt, option));
+				Node newNode = new Node(e.counts, new Attribute(minEntAtt, option));
 				previous.addElement(newNode);
 				buildTree(newNode, stillRemainingAttributes, stillRemaining);
 			}
@@ -94,35 +101,42 @@ public class Main {
 		
 		for (int i = 0; i < currOptions.size(); i++){
 			String s = currOptions.get(i);
-			double totY = 0;
-			double totN = 0;
-			for (List<String> l : remainingEntries){
-				if (l.get(attributeMap.get(a)).equals(s)){
-					if (l.get(l.size()-1).toLowerCase().equals("true")){
-						// entry and true
-						totY++;
-					} else{
-						// entry and false
-						totN++;
-					}
-				} else{
-					if (l.get(l.size()-1).toLowerCase().equals("true")){
-						// not entry and true
-						totN++;
-					} else{
-						// not entry and false
-						totY++;
-					}
-				}
+			Map<String, Integer> positions = new HashMap<String, Integer>();
+			for (String s1 : possibilities){
+				positions.put(s1, 0);
+			}
+			List<List<String>> remainingAfterFilter = filter(s, attributeMap.get(a), remainingEntries);
+			
+			for (List<String> l : remainingAfterFilter){
+				positions.put(l.get(l.size()-1), positions.get(l.get(l.size()-1))+1);
+				
 			}
 			// weight
-			tots[i] = totY + totN;
-			if (totY == 0 || totN == 0){
+			tots[i] = remainingAfterFilter.size();
+			if (tots[i] == 0){
+				ents[i] = 0;
+				continue;
+			}
+			
+			int found = 0;
+			for (Integer pV : positions.values()){
+				if (pV > 0){
+					found++;
+				}
+			}
+			
+			if (found <= 1){
 				// zero entropy
 				ents[i] = 0;
 			} else{
-				double tot = totY + totN;
-				double currEntr = - (totY/tot) * log2(totY/tot) - (totN/tot) * log2(totN/tot);
+				double currEntr = 0;
+				for (String s1 : possibilities){
+					if (positions.get(s1) != 0){
+						currEntr -= (positions.get(s1)/tots[i]) * log2(positions.get(s1)/tots[i]);
+					}
+				}
+//				double tot = totY + totN;
+//				currEntr = - (totY/tot) * log2(totY/tot) - (totN/tot) * log2(totN/tot);
 				ents[i] = currEntr;
 			}
 			
@@ -134,11 +148,24 @@ public class Main {
 			totalPop += tots[i];
 			totalEnt += ents[i] * tots[i];
 		}
-			
+
+		if (totalPop == 0){
+			return 1;
+		}
 		
 		return totalEnt / totalPop;
 	}
 	
+	private static List<List<String>> filter(String s, int pos, List<List<String>> remainingEntries) {
+		List<List<String>> toReturn = new ArrayList<List<String>>();
+		for (List<String> l : remainingEntries){
+			if (l.get(pos).equals(s)){
+				toReturn.add(l);
+			}
+		}
+		return toReturn;
+	}
+
 	public static double log2(double n)
 	{
 	    return (Math.log(n) / Math.log(2));
@@ -146,18 +173,19 @@ public class Main {
 
 	private static void parse() throws IOException, InvalidAttributesException {
 		attributes = new ArrayList<String>();
+		possibilities = new ArrayList<String>();
 		entries = new ArrayList<List<String>>();
 		options = new HashMap<String, List<String>>();
 		attributeMap = new HashMap<String, Integer>();
 		
-		BufferedReader reader = new BufferedReader(new FileReader("input.txt"));
+		BufferedReader reader = new BufferedReader(new FileReader(fileName));
 		
 		String readLine = null;
 		
 		readLine = reader.readLine();
 
 		// comments
-		while (readLine.equals("%")){
+		while (readLine.startsWith("%")){
 			readLine = reader.readLine();
 		}
 		
@@ -168,9 +196,8 @@ public class Main {
 		
 		//relation
 		if (readLine.split(" ")[0].toLowerCase().equals("@relation")){
-			relation = readLine.split(" ")[1].toLowerCase();
-		}
-//		System.out.println("Relation " + relation);
+			relation = readLine.split(" ")[1].toLowerCase();		}
+		System.out.println("Relation " + relation);
 		
 		readLine = reader.readLine();
 				
@@ -179,10 +206,10 @@ public class Main {
 		}
 		
 		int counter = 0;
-		while (readLine.split(" ")[0].equals("@ATTRIBUTE")){
+		while (readLine.split(" ")[0].toLowerCase().equals("@attribute")){
+			readLine = readLine.replace("{", "").replace("}", "").replace(",","");
 			String[] array = readLine.split(" ");
 			attributeMap.put(array[1], counter);
-//			attributes.add(new Attribute(array[1], array[2]));
 			attributes.add(array[1]);
 			readLine = reader.readLine();
 			counter++;
@@ -192,14 +219,19 @@ public class Main {
 			readLine = reader.readLine();
 		}
 		
-		if (!readLine.startsWith("@DATA")){
+		if (!readLine.trim().toLowerCase().equals("@data")){
 			System.out.println("no @data");
+//			System.out.println(readLine);
 			reader.close();
 			throw new InvalidAttributesException();
 
 		}	
 		
 		readLine = reader.readLine();
+		while (readLine.startsWith("%")){
+			readLine = reader.readLine();
+		}
+		
 		
 		for (String s : attributes){
 			options.put(s, new ArrayList<String>());
@@ -210,9 +242,13 @@ public class Main {
 			for (int i = 0; i < array.length-1; i++){
 				newEntry.add(array[i]);
 				List<String> curr = options.get(attributes.get(i));
+//				System.out.println(array[i]);
 				if (!curr.contains(array[i])){
 					curr.add(array[i]);
 				}
+			}
+			if (!possibilities.contains(array[array.length-1])){
+				possibilities.add(array[array.length-1]);
 			}
 			newEntry.add(array[array.length-1]);
 			entries.add(newEntry);

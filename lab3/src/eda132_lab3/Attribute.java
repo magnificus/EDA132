@@ -1,5 +1,6 @@
 package eda132_lab3;
 
+
 public class Attribute {
 	public String name;
 	public String type;

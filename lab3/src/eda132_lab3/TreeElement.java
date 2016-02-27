@@ -1,14 +1,14 @@
 package eda132_lab3;
 
+import java.util.Map;
+
 public abstract class TreeElement{
-	public int pos;
-	public int neg;
+	Map<String, Integer> counts;
 	
 	public Attribute option;
 	
-	public TreeElement(int pos, int neg, Attribute attribute){
-		this.pos = pos;
-		this.neg = neg;
+	public TreeElement(Map<String, Integer> counts, Attribute attribute){
+		this.counts = counts;
 		this.option = attribute;
 	}
 
