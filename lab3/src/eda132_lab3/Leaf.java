@@ -9,11 +9,17 @@ public class Leaf extends TreeElement{
 	}
 
 	@Override
-	public void print(String pre) {
+	public void print(String pre, boolean rec) {
 		System.out.print(pre + " ---LEAF--- " + option.name + ":" + option.type + " ");
 		for (String s : counts.keySet()){
 			System.out.print(s + ": " + counts.get(s) + " ");
 		}
 		System.out.println();
 	}
+
+	@Override
+	public void search(String[] recieved, String pre) {
+	}
+	
+	
 }

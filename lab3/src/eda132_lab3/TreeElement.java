@@ -12,5 +12,20 @@ public abstract class TreeElement{
 		this.option = attribute;
 	}
 
-	public abstract void print(String pre);
+	public abstract void print(String pre, boolean rec);
+
+	public boolean fits(String recieved) {
+		return option.type.compare(recieved);
+	}
+
+	public abstract void search(String[] recieved, String pre);
+	
+	public String getCountsString(String pre){
+		String toReturn = pre;
+		for (String s : counts.keySet()){
+			toReturn +=  s + ": " + counts.get(s) + " "; 
+		}
+		return toReturn;
+	}
+
 }
