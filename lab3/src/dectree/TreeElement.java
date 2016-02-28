@@ -1,15 +1,17 @@
-package eda132_lab3;
+package dectree;
 
 import java.util.Map;
+
+import eda132_lab3.Attribute;
 
 public abstract class TreeElement{
 	Map<String, Integer> counts;
 	
 	public Attribute option;
 	
-	public TreeElement(Map<String, Integer> counts, Attribute attribute){
+	public TreeElement(Map<String, Integer> counts, Attribute option){
 		this.counts = counts;
-		this.option = attribute;
+		this.option = option;
 	}
 
 	public abstract void print(String pre, boolean rec);

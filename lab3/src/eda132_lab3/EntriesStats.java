@@ -24,12 +24,11 @@ public class EntriesStats{
 			else{
 				counts.put(l.get(l.size()-1), rec+1);
 			}
-
 		}
-		totalNonEmpty = getTotalNonEmptyPos();
+		totalNonEmpty = calculateTotalNonEmptyPos();
 	}
 
-	private int getTotalNonEmptyPos() {
+	private int calculateTotalNonEmptyPos() {
 		int total = 0;
 		
 		for (String s : counts.keySet()){

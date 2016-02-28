@@ -1,8 +1,11 @@
-package eda132_lab3;
+package dectree;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import eda132_lab3.Attribute;
+import eda132_lab3.Main;
 
 
 public class Node extends TreeElement{
@@ -37,18 +40,8 @@ public class Node extends TreeElement{
 				t.search(recieved, pre + "\t");
 			}
 			
-		}
-//		System.out.println(getCountsString(pre));
-		
+		}		
 		
 	}
-//	protected String recSearch(String[] recieved) {
-//		for (TreeElement t : subNodes){
-//			if (t.fits(recieved[Main.attributeMap.get(t.option.name)])){
-//				return t.recSearch(recieved);
-//			}
-//		}
-//		return null;
-//		
-//	}
+
 }

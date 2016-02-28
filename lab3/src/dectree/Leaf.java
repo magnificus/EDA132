@@ -1,7 +1,8 @@
-package eda132_lab3;
+package dectree;
 
 import java.util.Map;
 
+import eda132_lab3.Attribute;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 
@@ -26,7 +27,6 @@ public class Leaf extends TreeElement{
 		alert.setTitle("Result");
 		alert.setHeaderText("The result of the search was: ");
 		alert.setContentText(getCountsString(""));
-
 		alert.showAndWait();
 	}
 	

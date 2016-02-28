@@ -20,15 +20,18 @@ import javax.naming.directory.InvalidAttributesException;
 import comparators.DoubleComparator;
 import comparators.StringComparator;
 import comparators.ValueComparator;
+import dectree.Leaf;
+import dectree.Node;
 
 public class Main extends Application {
 
-	public static String fileName = "input.txt";
+	public static String fileName = "diabetes.arff";
 
+	// dunno what this is
 	public static String relation;
 	// possible "splitters", known factors
 	public static List<String> attributes;
-	// possible answers, i.e. True and False of binary question
+	// possible final answers, i.e. True and False for a binary question
 	public static List<String> possibilities;
 	// possible alternatives for each factor
 	public static Map<String, List<ValueComparator>> options;
@@ -49,7 +52,6 @@ public class Main extends Application {
 		try {
 			parse();
 		} catch (InvalidAttributesException | IOException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 
@@ -57,7 +59,6 @@ public class Main extends Application {
 		try {
 			e = new EntriesStats(entries, possibilities);
 		} catch (InvalidAttributesException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		System.out.println("Decision tree possibilities: " + e.counts.size());
@@ -66,12 +67,13 @@ public class Main extends Application {
 		try {
 			buildTree(root, attributes, entries);
 		} catch (InvalidAttributesException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		
 		System.out.println("\nFull decision tree: ");
 		root.print("", true);
+		
+		
 		
 		
 		// now search in it
@@ -86,7 +88,11 @@ public class Main extends Application {
 			inp.setHeaderText(attributes.get(i));
 			inp.setContentText(alts);
 			Optional<String> result = inp.showAndWait();
+			if (!result.isPresent()){
+				return;
+			}
 			recieved[i] = result.get();
+			
 
 		}
 		
@@ -95,12 +101,12 @@ public class Main extends Application {
 
 	}
 
-	private static void buildTree(Node previous, List<String> remaining, List<List<String>> remainingEntries) throws InvalidAttributesException {
+	private static void buildTree(Node previous, List<String> remainingAttributes, List<List<String>> remainingEntries) throws InvalidAttributesException {
 
 		double minEnt = Double.MAX_VALUE;
 		String minEntAtt = null;
 		double currEntropy;
-		for (String a : remaining) {
+		for (String a : remainingAttributes) {
 			// calculate entropy for each..
 			currEntropy = calculateEntropy(a, remainingEntries);
 			// System.out.println(currEntropy);
@@ -112,17 +118,13 @@ public class Main extends Application {
 
 		// split on attributes
 		for (ValueComparator option : options.get(minEntAtt)) {
-			List<String> stillRemainingAttributes = new ArrayList<String>(remaining);
+			List<String> stillRemainingAttributes = new ArrayList<String>(remainingAttributes);
 			stillRemainingAttributes.remove(minEntAtt);
-			List<List<String>> stillRemaining = new ArrayList<List<String>>();
-			for (List<String> l : remainingEntries) {
-				if (option.compare(l.get(attributeMap.get(minEntAtt)))) {
-					stillRemaining.add(l);
-				}
-			}
+			List<List<String>> stillRemaining = filter(option, attributeMap.get(minEntAtt), remainingEntries);
 			EntriesStats e = new EntriesStats(stillRemaining, possibilities);
 			int tot = e.totalNonEmpty;
 			if (tot < 2 || stillRemainingAttributes.size() == 0 || stillRemaining.size() == 0) {
+				// we've reached the bottom of the tree
 				if (tot == 0) {
 					// no leaf for empty set
 					continue;
@@ -130,6 +132,7 @@ public class Main extends Application {
 				Leaf newLeaf = new Leaf(e.counts, new Attribute(minEntAtt, option));
 				previous.addElement(newLeaf);
 			} else {
+				// not bottom, keep going
 				Node newNode = new Node(e.counts, new Attribute(minEntAtt, option));
 				previous.addElement(newNode);
 				buildTree(newNode, stillRemainingAttributes, stillRemaining);
@@ -160,6 +163,8 @@ public class Main extends Application {
 			}
 			// weight
 			tots[i] = remainingAfterFilter.size();
+			
+			// no entries satisfies these filters, ignore this option
 			if (tots[i] == 0) {
 				ents[i] = 0;
 				continue;
@@ -293,7 +298,7 @@ public class Main extends Application {
 				List<String> curr = preliminaryComparators.get(attributes.get(i));
 				curr.add(array[i]);
 			}
-			// the result, i.e. most often only true or false, make sure that
+			// the result, i.e. for most trees only True/False, make sure that
 			// the current result exists as a possibility
 			if (!possibilities.contains(array[array.length - 1])) {
 				possibilities.add(array[array.length - 1]);
