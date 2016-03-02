@@ -13,7 +13,7 @@
 @ATTRIBUTE WillWait Boolean
 
 @DATA
-True,False,False,True,Some,$$$,False,True,0-10,True
+True,False,False,True,Some,$$$,False,True,French,0-10,True
 True,False,False,True,Full,$,False,False,Thai,30-60,False
 False,True,False,False,Some,$,False,False,Burger,0-10,True
 True,False,True,True,Full,$,True,False,Thai,10-30,True
