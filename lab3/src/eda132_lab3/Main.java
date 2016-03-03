@@ -25,7 +25,7 @@ import dectree.Node;
 
 public class Main extends Application {
 
-	public static String fileName = "diabetes.arff";
+	public static String fileName = "segment.arff";
 
 	// dunno what this is
 	public static String relation;
@@ -40,14 +40,11 @@ public class Main extends Application {
 	// the data entries
 	public static List<List<String>> entries;
 
-	
+    public static void main(String[] args){
+        Application.launch(args);
+    }
 	
 	public static void launch(String[] newName) {
-
-		// potentially pass filename as parameter
-		if (newName != null && newName.length > 0) {
-			fileName = newName[0];
-		}
 
 		try {
 			parse();
@@ -109,7 +106,7 @@ public class Main extends Application {
 		for (String a : remainingAttributes) {
 			// calculate entropy for each..
 			currEntropy = calculateEntropy(a, remainingEntries);
-			// System.out.println(currEntropy);
+//			System.out.println(currEntropy);
 			if (currEntropy < minEnt) {
 				minEnt = currEntropy;
 				minEntAtt = a;
@@ -359,7 +356,13 @@ public class Main extends Application {
 
 	@Override
 	public void start(Stage arg0) throws Exception {
-		launch(null);
+        List<String> recievedList = getParameters().getRaw();
+        if (!recievedList.isEmpty()){
+            fileName = recievedList.get(0);
+        }
+
+
+        launch(null);
 		
 	}
 
